@@ -31,25 +31,15 @@ export const useAuth = () => {
     return () => subscription.unsubscribe()
   }, [])
 
-  const signInWithOtp = async (email: string) => {
-    // Force email OTP (6-digit code) instead of magic link
+  const signInWithMagicLink = async (email: string) => {
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
+        emailRedirectTo: window.location.origin,
         shouldCreateUser: true,
-        emailRedirectTo: undefined, // Disable magic link redirect
       },
     })
     return { error }
-  }
-
-  const verifyOtp = async (email: string, token: string) => {
-    const { data, error } = await supabase.auth.verifyOtp({
-      email,
-      token,
-      type: 'email',
-    })
-    return { data, error }
   }
 
   const signOut = async () => {
@@ -60,8 +50,7 @@ export const useAuth = () => {
   return {
     user,
     loading,
-    signInWithOtp,
-    verifyOtp,
+    signInWithMagicLink,
     signOut,
   }
 }
