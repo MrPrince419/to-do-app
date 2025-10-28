@@ -48,6 +48,66 @@ export const useTodos = (userId: string | undefined) => {
     }
   }, [])
 
+  // Load todos from localStorage for offline support
+  const loadFromLocalStorage = useCallback(() => {
+    try {
+      const stored = localStorage.getItem(OFFLINE_STORAGE_KEY)
+      if (stored) {
+        setTodos(JSON.parse(stored))
+      }
+    } catch (error) {
+      console.error('Error loading from localStorage:', error)
+    }
+  }, [])
+
+  // Save todos to localStorage
+  const saveToLocalStorage = useCallback((todosToSave: Todo[]) => {
+    try {
+      localStorage.setItem(OFFLINE_STORAGE_KEY, JSON.stringify(todosToSave))
+    } catch (error) {
+      console.error('Error saving to localStorage:', error)
+    }
+  }, [])
+
+  // Fetch todos from Supabase
+  const fetchTodos = useCallback(async (skipIfOfflineChanges = false) => {
+    if (!userId) {
+      setLoading(false)
+      return
+    }
+
+    // Don't overwrite local changes if we have pending offline actions
+    if (skipIfOfflineChanges) {
+      const queue = getOfflineQueue()
+      if (queue.length > 0) {
+        console.log('Skipping fetch - offline changes pending')
+        setLoading(false)
+        return
+      }
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('todos')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+
+      setTodos(data || [])
+      saveToLocalStorage(data || [])
+    } catch (error) {
+      console.error('Error fetching todos:', error)
+      // If offline, load from localStorage
+      if (!isOnline) {
+        loadFromLocalStorage()
+      }
+    } finally {
+      setLoading(false)
+    }
+  }, [userId, isOnline, loadFromLocalStorage, saveToLocalStorage, getOfflineQueue])
+
   // Process offline queue when coming back online
   const processOfflineQueue = useCallback(async () => {
     if (!userId || !isOnline) return
@@ -134,66 +194,6 @@ export const useTodos = (userId: string | undefined) => {
       window.removeEventListener('offline', handleOffline)
     }
   }, [processOfflineQueue])
-
-  // Load todos from localStorage for offline support
-  const loadFromLocalStorage = useCallback(() => {
-    try {
-      const stored = localStorage.getItem(OFFLINE_STORAGE_KEY)
-      if (stored) {
-        setTodos(JSON.parse(stored))
-      }
-    } catch (error) {
-      console.error('Error loading from localStorage:', error)
-    }
-  }, [])
-
-  // Save todos to localStorage
-  const saveToLocalStorage = useCallback((todosToSave: Todo[]) => {
-    try {
-      localStorage.setItem(OFFLINE_STORAGE_KEY, JSON.stringify(todosToSave))
-    } catch (error) {
-      console.error('Error saving to localStorage:', error)
-    }
-  }, [])
-
-  // Fetch todos from Supabase
-  const fetchTodos = useCallback(async (skipIfOfflineChanges = false) => {
-    if (!userId) {
-      setLoading(false)
-      return
-    }
-
-    // Don't overwrite local changes if we have pending offline actions
-    if (skipIfOfflineChanges) {
-      const queue = getOfflineQueue()
-      if (queue.length > 0) {
-        console.log('Skipping fetch - offline changes pending')
-        setLoading(false)
-        return
-      }
-    }
-
-    try {
-      const { data, error } = await supabase
-        .from('todos')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
-
-      if (error) throw error
-
-      setTodos(data || [])
-      saveToLocalStorage(data || [])
-    } catch (error) {
-      console.error('Error fetching todos:', error)
-      // If offline, load from localStorage
-      if (!isOnline) {
-        loadFromLocalStorage()
-      }
-    } finally {
-      setLoading(false)
-    }
-  }, [userId, isOnline, loadFromLocalStorage, saveToLocalStorage, getOfflineQueue])
 
   // Subscribe to real-time updates
   useEffect(() => {
