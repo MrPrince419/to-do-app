@@ -118,9 +118,23 @@ export const useTodos = (userId: string | undefined) => {
     setSyncing(true)
     console.log('Processing offline queue:', queue.length, 'actions')
 
+    // Track which temp IDs were deleted offline (don't sync these)
+    const deletedTempIds = new Set<string>()
+    queue.forEach(action => {
+      if (action.type === 'delete' && action.id?.startsWith('temp-')) {
+        deletedTempIds.add(action.id)
+      }
+    })
+
     for (const action of queue) {
       try {
-        if (action.type === 'add' && action.data) {
+        if (action.type === 'add' && action.data && action.tempId) {
+          // Skip adding if this temp ID was deleted offline
+          if (deletedTempIds.has(action.tempId)) {
+            console.log('Skipping add - was deleted offline:', action.tempId)
+            continue
+          }
+
           // Add the todo to Supabase
           const { data, error } = await supabase
             .from('todos')
@@ -147,13 +161,8 @@ export const useTodos = (userId: string | undefined) => {
             .update(action.data)
             .eq('id', action.id)
         } else if (action.type === 'delete' && action.id) {
-          // Skip if it's a temp ID (just remove locally)
+          // Skip if it's a temp ID (already handled above)
           if (action.id.startsWith('temp-')) {
-            setTodos((current) => {
-              const newTodos = current.filter((todo) => todo.id !== action.id)
-              saveToLocalStorage(newTodos)
-              return newTodos
-            })
             continue
           }
 
