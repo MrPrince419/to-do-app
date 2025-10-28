@@ -153,8 +153,19 @@ export const useTodos = (userId: string | undefined) => {
             })
           }
         } else if (action.type === 'update' && action.id && action.data) {
-          // Skip if it's a temp ID (will be handled by add action)
-          if (action.id.startsWith('temp-')) continue
+          // Skip if it's a temp ID (need to find the real ID first)
+          if (action.id.startsWith('temp-')) {
+            // Find if this temp ID was replaced with a real ID
+            const realTodo = todos.find(t => t.id === action.id || (!t.id.startsWith('temp-') && t.title === action.data?.title))
+            if (realTodo && !realTodo.id.startsWith('temp-')) {
+              // Update with real ID
+              await supabase
+                .from('todos')
+                .update(action.data)
+                .eq('id', realTodo.id)
+            }
+            continue
+          }
 
           await supabase
             .from('todos')
@@ -235,12 +246,24 @@ export const useTodos = (userId: string | undefined) => {
           (payload) => {
             if (payload.eventType === 'INSERT') {
               setTodos((current) => {
+                // Prevent duplicates - check if todo already exists
+                const exists = current.some(todo => todo.id === (payload.new as Todo).id)
+                if (exists) {
+                  console.log('Todo already exists, skipping real-time INSERT')
+                  return current
+                }
                 const newTodos = [payload.new as Todo, ...current]
                 saveToLocalStorage(newTodos)
                 return newTodos
               })
             } else if (payload.eventType === 'UPDATE') {
               setTodos((current) => {
+                // Check if todo exists before updating
+                const exists = current.some(todo => todo.id === (payload.new as Todo).id)
+                if (!exists) {
+                  console.log('Todo not found for UPDATE, skipping')
+                  return current
+                }
                 const newTodos = current.map((todo) =>
                   todo.id === payload.new.id ? (payload.new as Todo) : todo
                 )

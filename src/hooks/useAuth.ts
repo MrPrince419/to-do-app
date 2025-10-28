@@ -44,6 +44,13 @@ export const useAuth = () => {
 
   const signOut = async () => {
     const { error } = await supabase.auth.signOut()
+    
+    // Clear local data on sign out
+    if (!error) {
+      localStorage.removeItem('todos_offline_storage')
+      localStorage.removeItem('todos_offline_queue')
+    }
+    
     return { error }
   }
 

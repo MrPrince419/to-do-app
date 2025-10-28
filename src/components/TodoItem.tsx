@@ -32,10 +32,26 @@ const TodoItem = ({ todo, onToggleComplete, onUpdate, onDelete }: TodoItemProps)
   const { isOpen, onOpen, onClose } = useDisclosure()
   const cancelRef = useRef<HTMLButtonElement>(null)
 
+  // Update editValue if todo.title changes (real-time update)
+  const prevTitleRef = useRef(todo.title)
+  if (prevTitleRef.current !== todo.title && !isEditing) {
+    setEditValue(todo.title)
+    prevTitleRef.current = todo.title
+  }
+
   const handleSave = () => {
-    if (editValue.trim() && editValue !== todo.title) {
-      onUpdate(todo.id, editValue.trim())
+    const trimmedValue = editValue.trim()
+    
+    // Don't save if empty or unchanged
+    if (!trimmedValue) {
+      handleCancel()
+      return
     }
+    
+    if (trimmedValue !== todo.title) {
+      onUpdate(todo.id, trimmedValue)
+    }
+    
     setIsEditing(false)
   }
 
