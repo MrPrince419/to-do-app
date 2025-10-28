@@ -40,11 +40,14 @@ const TodoApp = () => {
   const handleAddTodo = async (title: string) => {
     const { error } = await addTodo(title)
     if (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to add todo'
       toast({
-        title: 'Error adding todo',
-        description: error instanceof Error ? error.message : 'Failed to add todo',
+        title: 'Could not add todo',
+        description: errorMessage.includes('fetch') || errorMessage.includes('network')
+          ? 'Network error. Your todo will be added when you\'re back online.'
+          : errorMessage,
         status: 'error',
-        duration: 3000,
+        duration: 5000,
         isClosable: true,
       })
     }
@@ -53,11 +56,14 @@ const TodoApp = () => {
   const handleUpdateTodo = async (id: string, title: string) => {
     const { error } = await updateTodo(id, { title })
     if (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to update todo'
       toast({
-        title: 'Error updating todo',
-        description: error instanceof Error ? error.message : 'Failed to update todo',
+        title: 'Could not update todo',
+        description: errorMessage.includes('fetch') || errorMessage.includes('network')
+          ? 'Network error. Changes will be saved when you\'re back online.'
+          : errorMessage,
         status: 'error',
-        duration: 3000,
+        duration: 5000,
         isClosable: true,
       })
     }
@@ -66,11 +72,21 @@ const TodoApp = () => {
   const handleDeleteTodo = async (id: string) => {
     const { error } = await deleteTodo(id)
     if (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to delete todo'
       toast({
-        title: 'Error deleting todo',
-        description: error instanceof Error ? error.message : 'Failed to delete todo',
+        title: 'Could not delete todo',
+        description: errorMessage.includes('fetch') || errorMessage.includes('network')
+          ? 'Network error. The todo will be deleted when you\'re back online.'
+          : errorMessage,
         status: 'error',
-        duration: 3000,
+        duration: 5000,
+        isClosable: true,
+      })
+    } else {
+      toast({
+        title: 'Todo deleted',
+        status: 'success',
+        duration: 2000,
         isClosable: true,
       })
     }
@@ -79,11 +95,14 @@ const TodoApp = () => {
   const handleToggleComplete = async (id: string, completed: boolean) => {
     const { error } = await toggleComplete(id, completed)
     if (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to update todo'
       toast({
-        title: 'Error updating todo',
-        description: error instanceof Error ? error.message : 'Failed to update todo',
+        title: 'Could not update todo',
+        description: errorMessage.includes('fetch') || errorMessage.includes('network')
+          ? 'Network error. Your change will be saved when you\'re back online.'
+          : errorMessage,
         status: 'error',
-        duration: 3000,
+        duration: 5000,
         isClosable: true,
       })
     }

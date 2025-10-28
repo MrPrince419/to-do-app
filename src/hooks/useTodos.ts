@@ -289,7 +289,7 @@ export const useTodos = (userId: string | undefined) => {
     }
   }, [userId, isOnline, fetchTodos, saveToLocalStorage, getOfflineQueue, loadFromLocalStorage])
 
-  const addTodo = async (title: string) => {
+  const addTodo = async (title: string, retryCount = 0) => {
     if (!userId) return { error: new Error('User not authenticated') }
 
     const newTodo: Partial<Todo> = {
@@ -297,6 +297,22 @@ export const useTodos = (userId: string | undefined) => {
       completed: false,
       user_id: userId,
     }
+
+    // Optimistic update - add immediately to UI
+    const tempTodo: Todo = {
+      id: `temp-${Date.now()}`,
+      user_id: userId,
+      title,
+      completed: false,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }
+
+    setTodos((current) => {
+      const newTodos = [tempTodo, ...current]
+      saveToLocalStorage(newTodos)
+      return newTodos
+    })
 
     try {
       const { data, error } = await supabase
@@ -307,39 +323,57 @@ export const useTodos = (userId: string | undefined) => {
 
       if (error) throw error
 
+      // Replace temp todo with real todo
+      setTodos((current) => {
+        const newTodos = current.map((todo) =>
+          todo.id === tempTodo.id ? data : todo
+        )
+        saveToLocalStorage(newTodos)
+        return newTodos
+      })
+
       return { data, error: null }
     } catch (error) {
-      // If offline, add to local state and queue for sync
-      if (!isOnline) {
-        const tempTodo: Todo = {
-          id: `temp-${Date.now()}`,
-          user_id: userId,
-          title,
-          completed: false,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        }
-        
-        // Add to offline queue
+      // If offline or network error, queue for sync
+      if (!isOnline || (error as any).message?.includes('fetch')) {
         addToOfflineQueue({
           type: 'add',
           tempId: tempTodo.id,
           data: { title, completed: false, user_id: userId },
           timestamp: Date.now(),
         })
-
-        setTodos((current) => {
-          const newTodos = [tempTodo, ...current]
-          saveToLocalStorage(newTodos)
-          return newTodos
-        })
         return { data: tempTodo, error: null }
       }
+
+      // Retry logic (max 2 retries)
+      if (retryCount < 2) {
+        console.log(`Retrying add todo, attempt ${retryCount + 1}`)
+        await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)))
+        return addTodo(title, retryCount + 1)
+      }
+
+      // Failed - remove optimistic update
+      setTodos((current) => {
+        const newTodos = current.filter((todo) => todo.id !== tempTodo.id)
+        saveToLocalStorage(newTodos)
+        return newTodos
+      })
+
       return { data: null, error }
     }
   }
 
-  const updateTodo = async (id: string, updates: Partial<Todo>) => {
+  const updateTodo = async (id: string, updates: Partial<Todo>, retryCount = 0) => {
+    // Optimistic update - update immediately in UI
+    const previousTodos = todos
+    setTodos((current) => {
+      const newTodos = current.map((todo) =>
+        todo.id === id ? { ...todo, ...updates, updated_at: new Date().toISOString() } : todo
+      )
+      saveToLocalStorage(newTodos)
+      return newTodos
+    })
+
     try {
       const { data, error } = await supabase
         .from('todos')
@@ -352,30 +386,43 @@ export const useTodos = (userId: string | undefined) => {
 
       return { data, error: null }
     } catch (error) {
-      // If offline, update local state and queue for sync
-      if (!isOnline) {
-        // Add to offline queue
+      // If offline or network error, queue for sync
+      if (!isOnline || (error as any).message?.includes('fetch')) {
         addToOfflineQueue({
           type: 'update',
           id,
           data: { ...updates, updated_at: new Date().toISOString() },
           timestamp: Date.now(),
         })
-
-        setTodos((current) => {
-          const newTodos = current.map((todo) =>
-            todo.id === id ? { ...todo, ...updates, updated_at: new Date().toISOString() } : todo
-          )
-          saveToLocalStorage(newTodos)
-          return newTodos
-        })
         return { data: null, error: null }
       }
+
+      // Retry logic (max 2 retries)
+      if (retryCount < 2) {
+        console.log(`Retrying update todo, attempt ${retryCount + 1}`)
+        await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)))
+        return updateTodo(id, updates, retryCount + 1)
+      }
+
+      // Failed - rollback optimistic update
+      setTodos(previousTodos)
+      saveToLocalStorage(previousTodos)
+
       return { data: null, error }
     }
   }
 
-  const deleteTodo = async (id: string) => {
+  const deleteTodo = async (id: string, retryCount = 0) => {
+    // Optimistic update - remove immediately from UI
+    const deletedTodo = todos.find(t => t.id === id)
+    const previousTodos = todos
+
+    setTodos((current) => {
+      const newTodos = current.filter((todo) => todo.id !== id)
+      saveToLocalStorage(newTodos)
+      return newTodos
+    })
+
     try {
       const { error } = await supabase.from('todos').delete().eq('id', id)
 
@@ -383,22 +430,29 @@ export const useTodos = (userId: string | undefined) => {
 
       return { error: null }
     } catch (error) {
-      // If offline, delete from local state and queue for sync
-      if (!isOnline) {
-        // Add to offline queue
+      // If offline or network error, queue for sync
+      if (!isOnline || (error as any).message?.includes('fetch')) {
         addToOfflineQueue({
           type: 'delete',
           id,
           timestamp: Date.now(),
         })
-
-        setTodos((current) => {
-          const newTodos = current.filter((todo) => todo.id !== id)
-          saveToLocalStorage(newTodos)
-          return newTodos
-        })
         return { error: null }
       }
+
+      // Retry logic (max 2 retries)
+      if (retryCount < 2) {
+        console.log(`Retrying delete todo, attempt ${retryCount + 1}`)
+        await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)))
+        return deleteTodo(id, retryCount + 1)
+      }
+
+      // Failed - restore deleted todo
+      if (deletedTodo) {
+        setTodos(previousTodos)
+        saveToLocalStorage(previousTodos)
+      }
+
       return { error }
     }
   }
