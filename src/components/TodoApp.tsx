@@ -21,7 +21,7 @@ import TodoList from './TodoList'
 
 const TodoApp = () => {
   const { user, signOut } = useAuth()
-  const { todos, loading, isOnline, addTodo, updateTodo, deleteTodo, toggleComplete } = useTodos(user?.id)
+  const { todos, loading, isOnline, syncing, addTodo, updateTodo, deleteTodo, toggleComplete } = useTodos(user?.id)
   const toast = useToast()
 
   const handleSignOut = async () => {
@@ -106,10 +106,15 @@ const TodoApp = () => {
               </Text>
             </VStack>
             <HStack>
-              <Badge colorScheme={isOnline ? 'green' : 'red'} fontSize="sm" px={2} py={1}>
+              <Badge 
+                colorScheme={syncing ? 'blue' : isOnline ? 'green' : 'red'} 
+                fontSize="sm" 
+                px={2} 
+                py={1}
+              >
                 <HStack spacing={1}>
                   {isOnline ? <FiWifi /> : <FiWifiOff />}
-                  <Text>{isOnline ? 'Online' : 'Offline'}</Text>
+                  <Text>{syncing ? 'Syncing...' : isOnline ? 'Online' : 'Offline'}</Text>
                 </HStack>
               </Badge>
               <Menu>
