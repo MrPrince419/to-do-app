@@ -7,16 +7,23 @@ export const useAuth = () => {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Check active sessions
+    // Check active sessions and handle redirect
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null)
       setLoading(false)
     })
 
-    // Listen for auth changes
+    // Listen for auth changes (including magic link callback)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setUser(session?.user ?? null)
+      async (event, session) => {
+        console.log('Auth event:', event, 'User:', session?.user?.email)
+        
+        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+          setUser(session?.user ?? null)
+        } else if (event === 'SIGNED_OUT') {
+          setUser(null)
+        }
+        
         setLoading(false)
       }
     )
