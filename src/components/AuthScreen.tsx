@@ -17,16 +17,17 @@ import { useAuth } from '../hooks/useAuth'
 
 const AuthScreen = () => {
   const [email, setEmail] = useState('')
+  const [code, setCode] = useState('')
   const [loading, setLoading] = useState(false)
-  const [emailSent, setEmailSent] = useState(false)
-  const { signInWithMagicLink } = useAuth()
+  const [codeSent, setCodeSent] = useState(false)
+  const { signInWithOtp, verifyOtp } = useAuth()
   const toast = useToast()
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSendCode = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
 
-    const { error } = await signInWithMagicLink(email)
+    const { error } = await signInWithOtp(email)
 
     if (error) {
       toast({
@@ -37,11 +38,30 @@ const AuthScreen = () => {
         isClosable: true,
       })
     } else {
-      setEmailSent(true)
+      setCodeSent(true)
       toast({
         title: 'Check your email!',
-        description: 'We sent you a magic link to sign in.',
+        description: 'We sent you a 6-digit code.',
         status: 'success',
+        duration: 5000,
+        isClosable: true,
+      })
+    }
+
+    setLoading(false)
+  }
+
+  const handleVerifyCode = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+
+    const { error } = await verifyOtp(email, code)
+
+    if (error) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Invalid code. Please try again.',
+        status: 'error',
         duration: 5000,
         isClosable: true,
       })
@@ -71,28 +91,58 @@ const AuthScreen = () => {
             borderRadius="lg"
             boxShadow="lg"
           >
-            {emailSent ? (
-              <VStack spacing={4}>
-                <Icon as={FiMail} w={16} h={16} color="brand.500" />
-                <Heading size="md" textAlign="center">
-                  Check your email
-                </Heading>
-                <Text color="gray.600" textAlign="center">
-                  We've sent a magic link to <strong>{email}</strong>. Click the
-                  link in the email to sign in.
-                </Text>
-                <Button
-                  variant="ghost"
-                  onClick={() => {
-                    setEmailSent(false)
-                    setEmail('')
-                  }}
-                >
-                  Use a different email
-                </Button>
-              </VStack>
+            {codeSent ? (
+              <form onSubmit={handleVerifyCode}>
+                <VStack spacing={6}>
+                  <Icon as={FiMail} w={16} h={16} color="brand.500" />
+                  <Heading size="md" textAlign="center">
+                    Enter verification code
+                  </Heading>
+                  <Text color="gray.600" textAlign="center">
+                    We sent a 6-digit code to <strong>{email}</strong>
+                  </Text>
+                  <FormControl isRequired>
+                    <FormLabel>Verification Code</FormLabel>
+                    <Input
+                      type="text"
+                      value={code}
+                      onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                      placeholder="000000"
+                      size="lg"
+                      textAlign="center"
+                      fontSize="2xl"
+                      letterSpacing="0.5em"
+                      maxLength={6}
+                      autoFocus
+                    />
+                  </FormControl>
+                  <Button
+                    type="submit"
+                    colorScheme="brand"
+                    size="lg"
+                    w="100%"
+                    isLoading={loading}
+                    isDisabled={code.length !== 6}
+                  >
+                    Verify & Sign In
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    onClick={() => {
+                      setCodeSent(false)
+                      setCode('')
+                    }}
+                    size="sm"
+                  >
+                    Use a different email
+                  </Button>
+                  <Text fontSize="xs" color="gray.500" textAlign="center">
+                    Didn't receive the code? Check your spam folder or request a new one.
+                  </Text>
+                </VStack>
+              </form>
             ) : (
-              <form onSubmit={handleSubmit}>
+              <form onSubmit={handleSendCode}>
                 <VStack spacing={6}>
                   <Heading size="md">Sign in</Heading>
                   <FormControl isRequired>
@@ -103,6 +153,7 @@ const AuthScreen = () => {
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="you@example.com"
                       size="lg"
+                      autoFocus
                     />
                   </FormControl>
                   <Button
@@ -113,10 +164,10 @@ const AuthScreen = () => {
                     isLoading={loading}
                     leftIcon={<FiMail />}
                   >
-                    Send magic link
+                    Send verification code
                   </Button>
                   <Text fontSize="sm" color="gray.500" textAlign="center">
-                    No password needed! We'll email you a secure link to sign in.
+                    No password needed! We'll email you a 6-digit code to sign in.
                   </Text>
                 </VStack>
               </form>
