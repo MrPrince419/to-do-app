@@ -105,11 +105,12 @@ export const useTodos = (userId: string | undefined) => {
     }
 
     clearOfflineQueue()
+    
+    // Refetch to ensure everything is in sync (now safe to fetch)
+    await fetchTodos(false)
+    
     setSyncing(false)
-
-    // Refetch to ensure everything is in sync
-    await fetchTodos()
-  }, [userId, isOnline, getOfflineQueue, clearOfflineQueue, saveToLocalStorage])
+  }, [userId, isOnline, getOfflineQueue, clearOfflineQueue, saveToLocalStorage, fetchTodos])
 
   // Monitor online/offline status and sync when coming online
   useEffect(() => {
@@ -156,10 +157,20 @@ export const useTodos = (userId: string | undefined) => {
   }, [])
 
   // Fetch todos from Supabase
-  const fetchTodos = useCallback(async () => {
+  const fetchTodos = useCallback(async (skipIfOfflineChanges = false) => {
     if (!userId) {
       setLoading(false)
       return
+    }
+
+    // Don't overwrite local changes if we have pending offline actions
+    if (skipIfOfflineChanges) {
+      const queue = getOfflineQueue()
+      if (queue.length > 0) {
+        console.log('Skipping fetch - offline changes pending')
+        setLoading(false)
+        return
+      }
     }
 
     try {
@@ -182,13 +193,21 @@ export const useTodos = (userId: string | undefined) => {
     } finally {
       setLoading(false)
     }
-  }, [userId, isOnline, loadFromLocalStorage, saveToLocalStorage])
+  }, [userId, isOnline, loadFromLocalStorage, saveToLocalStorage, getOfflineQueue])
 
   // Subscribe to real-time updates
   useEffect(() => {
     if (!userId) return
 
-    fetchTodos()
+    // Don't fetch immediately if we have offline changes pending
+    const queue = getOfflineQueue()
+    if (queue.length === 0) {
+      fetchTodos()
+    } else {
+      console.log('Loading from localStorage - offline changes pending')
+      loadFromLocalStorage()
+      setLoading(false)
+    }
 
     let channel: RealtimeChannel
 
@@ -236,7 +255,7 @@ export const useTodos = (userId: string | undefined) => {
         supabase.removeChannel(channel)
       }
     }
-  }, [userId, isOnline, fetchTodos, saveToLocalStorage])
+  }, [userId, isOnline, fetchTodos, saveToLocalStorage, getOfflineQueue, loadFromLocalStorage])
 
   const addTodo = async (title: string) => {
     if (!userId) return { error: new Error('User not authenticated') }
