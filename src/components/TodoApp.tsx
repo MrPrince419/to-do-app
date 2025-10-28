@@ -129,29 +129,31 @@ const TodoApp = () => {
           </HStack>
 
           {/* Stats */}
-          <Box bg="white" p={4} borderRadius="lg" boxShadow="sm">
-            <HStack justify="space-around">
-              <VStack spacing={0}>
-                <Text fontSize="2xl" fontWeight="bold" color="brand.500">
+          <Box bg="white" p={6} borderRadius="xl" boxShadow="md" border="1px" borderColor="gray.100">
+            <HStack justify="space-around" spacing={4}>
+              <VStack spacing={1}>
+                <Text fontSize="3xl" fontWeight="bold" color="brand.500">
                   {todos.length}
                 </Text>
-                <Text fontSize="sm" color="gray.500">
+                <Text fontSize="xs" color="gray.500" fontWeight="medium">
                   Total
                 </Text>
               </VStack>
-              <VStack spacing={0}>
-                <Text fontSize="2xl" fontWeight="bold" color="green.500">
+              <Box h="50px" w="1px" bg="gray.200" />
+              <VStack spacing={1}>
+                <Text fontSize="3xl" fontWeight="bold" color="green.500">
                   {completedCount}
                 </Text>
-                <Text fontSize="sm" color="gray.500">
+                <Text fontSize="xs" color="gray.500" fontWeight="medium">
                   Completed
                 </Text>
               </VStack>
-              <VStack spacing={0}>
-                <Text fontSize="2xl" fontWeight="bold" color="orange.500">
+              <Box h="50px" w="1px" bg="gray.200" />
+              <VStack spacing={1}>
+                <Text fontSize="3xl" fontWeight="bold" color="orange.500">
                   {todos.length - completedCount}
                 </Text>
-                <Text fontSize="sm" color="gray.500">
+                <Text fontSize="xs" color="gray.500" fontWeight="medium">
                   Pending
                 </Text>
               </VStack>

@@ -23,15 +23,16 @@ const TodoInput = ({ onAdd }: TodoInputProps) => {
   }
 
   return (
-    <Box bg="white" p={4} borderRadius="lg" boxShadow="sm">
+    <Box bg="white" p={5} borderRadius="xl" boxShadow="md" border="1px" borderColor="gray.100">
       <form onSubmit={handleSubmit}>
-        <HStack>
+        <HStack spacing={3}>
           <Input
             value={value}
             onChange={(e) => setValue(e.target.value)}
-            placeholder="What needs to be done?"
+            placeholder="✍️ What needs to be done?"
             size="lg"
             variant="filled"
+            _focus={{ bg: 'gray.50', borderColor: 'brand.500' }}
           />
           <Button
             type="submit"
@@ -39,6 +40,7 @@ const TodoInput = ({ onAdd }: TodoInputProps) => {
             size="lg"
             leftIcon={<FiPlus />}
             px={8}
+            boxShadow="sm"
           >
             Add
           </Button>

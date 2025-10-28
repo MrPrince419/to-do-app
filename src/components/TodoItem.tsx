@@ -54,10 +54,12 @@ const TodoItem = ({ todo, onToggleComplete, onUpdate, onDelete }: TodoItemProps)
       <Box
         bg="white"
         p={4}
-        borderRadius="lg"
+        borderRadius="xl"
         boxShadow="sm"
+        border="1px"
+        borderColor="gray.100"
         transition="all 0.2s"
-        _hover={{ boxShadow: 'md' }}
+        _hover={{ boxShadow: 'md', borderColor: 'brand.200' }}
       >
         <HStack spacing={3}>
           <Checkbox

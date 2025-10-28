@@ -74,13 +74,20 @@ const AuthScreen = () => {
     <Box minH="100vh" bg="gray.50" py={20}>
       <Container maxW="md">
         <VStack spacing={8}>
-          <VStack spacing={2}>
-            <Icon as={FiCheckCircle} w={12} h={12} color="brand.500" />
-            <Heading size="xl" color="brand.600">
+          <VStack spacing={3}>
+            <Box 
+              bg="brand.500" 
+              p={4} 
+              borderRadius="2xl" 
+              boxShadow="lg"
+            >
+              <Icon as={FiCheckCircle} w={12} h={12} color="white" />
+            </Box>
+            <Heading size="xl" color="brand.600" fontWeight="bold">
               Todo PWA
             </Heading>
-            <Text color="gray.600" textAlign="center">
-              Your tasks, synced across all devices
+            <Text color="gray.600" textAlign="center" fontSize="lg">
+              ✨ Your tasks, synced across all devices
             </Text>
           </VStack>
 
