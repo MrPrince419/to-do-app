@@ -32,10 +32,12 @@ export const useAuth = () => {
   }, [])
 
   const signInWithOtp = async (email: string) => {
+    // Force email OTP (6-digit code) instead of magic link
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
         shouldCreateUser: true,
+        emailRedirectTo: undefined, // Disable magic link redirect
       },
     })
     return { error }
